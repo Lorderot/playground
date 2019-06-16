@@ -16,9 +16,14 @@ package cmd
 
 import (
 	"fmt"
+	"io/ioutil"
+	"net/http"
 
 	"github.com/spf13/cobra"
 )
+
+var username *string
+var password *string
 
 // pingCmd represents the ping command
 var pingCmd = &cobra.Command{
@@ -30,14 +35,34 @@ and usage of using your command. For example:
 Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("ping called")
+	RunE: func(cmd *cobra.Command, args []string) error {
+		req, err := http.NewRequest(http.MethodGet, "http://localhost:8080", nil)
+		if err != nil {
+			return err
+		}
+		if *username != "" {
+			req.SetBasicAuth(*username, *password)
+		}
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			fmt.Println(err.Error())
+			return nil
+		}
+		defer resp.Body.Close()
+		bytes, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			fmt.Println(err.Error())
+			return nil
+		}
+		fmt.Printf("%s", string(bytes))
+		return nil
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(pingCmd)
-
+	username = pingCmd.Flags().StringP("username", "u", "", "")
+	password = pingCmd.Flags().StringP("password", "p", "", "")
 	// Here you will define your flags and configuration settings.
 
 	// Cobra supports Persistent Flags which will work for this command
